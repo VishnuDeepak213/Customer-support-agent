@@ -1,16 +1,37 @@
 import streamlit as st
 import requests
 import json
+import os
 from datetime import datetime
 
 # Page config
 st.set_page_config(page_title="AI Support Agent", layout="wide", initial_sidebar_state="expanded")
 st.title("🤖 Agentforce Customer Support Agent")
 
+def _resolve_api_url() -> str:
+    """Resolve the backend URL from secrets/env and reject known bad values."""
+    fallback = "https://customer-support-agent-ygnl.onrender.com"
+    candidate = os.getenv("API_URL", fallback)
+    try:
+        if "API_URL" in st.secrets:
+            candidate = st.secrets["API_URL"]
+    except Exception:
+        pass
+
+    bad_markers = ("127.0.0.1", "localhost", "console.groq.com", "groq.com/keys")
+    if not isinstance(candidate, str) or not candidate.strip():
+        return fallback
+    if any(marker in candidate for marker in bad_markers):
+        return fallback
+    return candidate.strip().rstrip("/")
+
+
+DEFAULT_API_URL = _resolve_api_url()
+
 # Sidebar config
 with st.sidebar:
     st.header("⚙️ Settings")
-    api_url = st.text_input("API URL", value="http://127.0.0.1:8001", help="Backend FastAPI endpoint")
+    api_url = st.text_input("API URL", value=DEFAULT_API_URL, help="Backend FastAPI endpoint")
     mode = st.radio("Agent Mode", ["Hybrid (92% accuracy)", "Pure ReAct (22% accuracy)"])
     st.markdown("---")
     st.markdown("**Metrics:**")
